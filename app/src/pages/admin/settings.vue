@@ -130,6 +130,7 @@ export default {
                 { icon: "home", key: "site_title", label: "网站标题", },
                 { icon: "mdi-copyright", key: "HEADER", label: "网站公告", type: 'textarea' },
                 { icon: "mdi-copyright", key: "FOOTER", label: "网站脚注", type: 'textarea' },
+                { icon: "mdi-copyright", key: "FOOTER_INJECT", label: "页脚注入内容", type: 'textarea' },
             ],
             groups: [
             {
