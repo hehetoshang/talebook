@@ -240,6 +240,7 @@ class AdminSettings(BaseHandler):
             "EPUB_VIEWER",
             "FRIENDS",
             "FOOTER",
+            "FOOTER_INJECT",
             "HEADER",
             "INVITE_CODE",
             "INVITE_MESSAGE",
