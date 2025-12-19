@@ -241,6 +241,7 @@ class AdminSettings(BaseHandler):
             "FRIENDS",
             "FOOTER",
             "FOOTER_INJECT",
+            "SIDEBAR_INJECT",
             "HEADER",
             "INVITE_CODE",
             "INVITE_MESSAGE",

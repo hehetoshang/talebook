@@ -57,7 +57,8 @@
                     </v-list-item>
                 </template>
                 <v-list-item>
-                    <v-img class="ma-auto" max-width="128" src="/logo/link.png"></v-img>
+                    <div v-if="sys.sidebar_inject" class="ma-auto" v-html="sys.sidebar_inject"></div>
+                    <v-img v-else class="ma-auto" max-width="128" src="/logo/link.png"></v-img>
                 </v-list-item>
             </v-list>
         </v-navigation-drawer>
@@ -213,6 +214,8 @@ export default {
             mtime: "",
             title: "",
             footer: "",
+            footer_inject: "",
+            sidebar_inject: "",
             socials: [],
             friends: [],
             allow: {

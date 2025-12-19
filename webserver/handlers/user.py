@@ -296,6 +296,7 @@ class UserInfo(BaseHandler):
             "friends": CONF["FRIENDS"],
             "footer": CONF["FOOTER"],
             "footer_inject": CONF["FOOTER_INJECT"],
+            "sidebar_inject": CONF["SIDEBAR_INJECT"],
             "header": CONF["HEADER"],
             "allow": {
                 "register": CONF["ALLOW_REGISTER"],
