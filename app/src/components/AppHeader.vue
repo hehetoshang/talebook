@@ -56,9 +56,8 @@
                         </v-list-item-action>
                     </v-list-item>
                 </template>
-                <v-list-item>
-                    <div v-if="sys.sidebar_inject" class="ma-auto" v-html="sys.sidebar_inject"></div>
-                    <v-img v-else class="ma-auto" max-width="128" src="/logo/link.png"></v-img>
+                <v-list-item v-if="sys.sidebar_inject">
+                    <div class="ma-auto" v-html="sys.sidebar_inject"></div>
                 </v-list-item>
             </v-list>
         </v-navigation-drawer>
