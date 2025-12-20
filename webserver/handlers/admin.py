@@ -252,6 +252,7 @@ class AdminSettings(BaseHandler):
             "SIGNUP_MAIL_CONTENT",
             "SIGNUP_MAIL_TITLE",
             "SOCIALS",
+            "SHOW_SIDEBAR_SYS",
             "autoreload",
             "cookie_secret",
             "scan_upload_path",

@@ -277,7 +277,7 @@ export default {
                 .concat(this.user.is_admin ? admin_links : [])
                 .concat(nav_links)
                 .concat(this.sys.friends.length > 0 ? friend_links : [])
-                .concat(sys_links);
+                .concat(this.sys.show_sidebar_sys !== false ? sys_links : []);
         },
     },
     mounted() {

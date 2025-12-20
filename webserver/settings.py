@@ -111,6 +111,7 @@ settings = {
     'FOOTER': '本站基于Calibre构建，感谢开源界的力量。所有资源搜集于互联网，如有侵权请邮件联系。',
     'FOOTER_INJECT': '',
     'SIDEBAR_INJECT': '<img class="ma-auto footer-logo" style="max-width: 130px; height: auto;" src="/logo/link.png">',
+    'SHOW_SIDEBAR_SYS': True,
 
     'FRIENDS': [
         { "text": u"鸠摩搜索", "href": "https://www.jiumodiary.com/" },

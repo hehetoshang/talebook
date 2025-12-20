@@ -132,6 +132,7 @@ export default {
                 { icon: "mdi-copyright", key: "FOOTER", label: "网站脚注", type: 'textarea' },
                 { icon: "mdi-copyright", key: "FOOTER_INJECT", label: "页脚注入内容", type: 'textarea' },
                 { icon: "mdi-copyright", key: "SIDEBAR_INJECT", label: "侧边栏底部注入内容", type: 'textarea' },
+                { icon: "mdi-menu", key: "SHOW_SIDEBAR_SYS", label: "显示侧边菜单系统部分", type: 'checkbox' },
             ],
             groups: [
             {
