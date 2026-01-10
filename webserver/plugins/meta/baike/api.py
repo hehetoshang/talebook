@@ -81,14 +81,7 @@ class BaiduBaikeApi:
         if not self.copy_image or not cover_url:
             return None
         try:
-            rsp = requests.get(cover_url, timeout=10, headers=CHROME_HEADERS)
-            if rsp.status_code != 200:
-                logging.error(_(f"获取封面失败: status_code[{rsp.status_code}] != 200 OK"))
-                return None
-            img = rsp.content
-            if not img or len(img) == 0:
-                logging.error(_("获取封面失败: 封面数据为空"))
-                return None
+            img = requests.get(cover_url, timeout=10, headers=CHROME_HEADERS).content
             img_fmt = cover_url.split(".")[-1]
             return (img_fmt, img)
         except Exception as e:
