@@ -1,5 +1,5 @@
 <template>
-  <v-main>
+  <div>
     <v-container fluid class="d-flex align-center justify-center min-vh-100">
       <v-row justify="center">
         <v-col cols="12" class="text-center">
@@ -17,16 +17,12 @@
         </v-col>
       </v-row>
     </v-container>
-  </v-main>
+  </div>
 </template>
 
 <script>
 export default {
   name: 'NotFoundPage',
-  created() {
-    // 关闭侧边栏
-    this.$store.commit('navbar', false);
-  },
   head() {
     return {
       title: '404 - 页面未找到',
