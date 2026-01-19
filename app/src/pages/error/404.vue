@@ -23,6 +23,8 @@
 <script>
 export default {
   name: 'NotFoundPage',
+  // 确保使用默认布局
+  layout: 'default',
   head() {
     return {
       title: '404 - 页面未找到',
