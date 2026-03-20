@@ -38,7 +38,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^10.7.0",
     "globals": "^17.3.0",
-    "h3": "^2.0.1-rc.11",
+    "h3": "^2.0.1-rc.17",
     "happy-dom": "^20.3.9",
     "listhen": "^1.9.0",
     "resize-observer-polyfill": "^1.5.1",
