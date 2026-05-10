@@ -3,6 +3,7 @@
 
 
 import datetime
+import re
 from webserver.i18n import _
 
 
@@ -134,6 +135,25 @@ def super_strip(s):
     # 删除掉所有不可见的字符
     # issue: https://github.com/talebook/talebook/issues/304
     return "".join(c for c in s.strip() if c.isprintable())
+
+
+def remove_zlibrary_suffix(title):
+    # 移除 Z-Library 下载书籍自带的后缀标记
+    # 例如: "书名 [z-library]" / "书名_z-lib.org" 等
+    if not title:
+        return title
+    title = re.sub(r"\s*\[z-?[lL]ibrary\]", "", title, flags=re.IGNORECASE)
+    title = re.sub(r"\s*[-_]?z-?lib\.org", "", title, flags=re.IGNORECASE)
+    return title
+
+
+def get_title_sort(title):
+    # 获取用于排序的书名，移除常见的后缀标记
+    if not title:
+        return ""
+    result = remove_zlibrary_suffix(title)
+    result = re.sub(r"\s*[\[（(].*?[\]）)].*$", "", result)
+    return super_strip(result)
 
 
 class ReadingStateFormatter:
