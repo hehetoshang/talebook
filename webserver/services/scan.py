@@ -19,26 +19,50 @@ SCAN_EXT = ["azw", "azw3", "epub", "mobi", "pdf", "txt"]
 
 
 class ScanService(AsyncService):
-    def _collect_imported_path(self):
+    def _collect_imported_path(self, skip_last=False):
         """收集已导入的路径，用于在扫描时跳过这些文件和目录"""
         start_time = time.time()
-        imported_rows = (
-            self.session.query(ScanFile.path)
+        base_query = (
+            self.session.query(ScanFile.path, ScanFile.import_id)
             .filter(ScanFile.status.in_([ScanFile.IMPORTED, ScanFile.EXIST]))
             .filter(ScanFile.path.isnot(None))
-            .order_by(ScanFile.update_time.desc(), ScanFile.id.desc())
-            .all()
         )
+
+        last_import_id = 0
+        if skip_last:
+            # 只跳过上次导入的目录
+            last_row = (
+                self.session.query(ScanFile.import_id)
+                .filter(ScanFile.status.in_([ScanFile.IMPORTED, ScanFile.EXIST]))
+                .filter(ScanFile.path.isnot(None))
+                .filter(ScanFile.import_id.isnot(None))
+                .order_by(ScanFile.import_id.desc())
+                .first()
+            )
+            if not last_row:
+                return [], [], 0
+            last_import_id = last_row[0]
+            imported_rows = (
+                base_query
+                .filter(ScanFile.import_id == last_import_id)
+                .order_by(ScanFile.id.desc())
+                .all()
+            )
+        else:
+            imported_rows = base_query.order_by(ScanFile.import_id.desc(), ScanFile.id.desc()).all()
+
         if not imported_rows:
-            return [], []
+            return [], [], 0
 
         last_imported_dir = None
         imported_dirs = set()
         imported_files_in_last_dir = set()
 
-        for (path,) in imported_rows:
+        for (path, import_id) in imported_rows:
             if not path:
                 continue
+            if last_import_id == 0:
+                last_import_id = import_id
             fpath = os.path.realpath(path)
             fdir = os.path.dirname(fpath)
             if last_imported_dir is None:
@@ -49,16 +73,17 @@ class ScanService(AsyncService):
                 imported_dirs.add(fdir)
 
         if last_imported_dir is None:
-            return [], []
+            return [], [], 0
 
         logging.info(
-            "[SCAN] Imported path cache loaded: dirs=%d, files_in_last_dir=%d, last_dir=%s, cost=%.3f seconds",
+            "[SCAN] Imported path cache loaded: dirs=%d, files_in_last_dir=%d, last_dir=%s, last_import_id=%d, cost=%.3f seconds",
             len(imported_dirs),
             len(imported_files_in_last_dir),
             last_imported_dir,
+            last_import_id,
             time.time() - start_time,
         )
-        return list(imported_dirs), list(imported_files_in_last_dir)
+        return list(imported_dirs), list(imported_files_in_last_dir), last_import_id
 
     def _collect_files(self, paths, imported_dirs=None, imported_files=None):
         """收集文件列表，跳过已导入的目录和文件"""
@@ -135,7 +160,7 @@ class ScanService(AsyncService):
         return query
 
     @AsyncService.register_service
-    def do_scan(self, path_dir):
+    def do_scan(self, path_dir, skip_last_dirs=0):
         from calibre.ebooks.metadata.meta import get_metadata
 
         logging.info("<%s> we are: db=%s, session=%s", self, self.db, self.session)
@@ -144,8 +169,11 @@ class ScanService(AsyncService):
         # 收集已导入的路径
         imported_dirs = []
         imported_files = []
-        if CONF.get("SKIP_IMPORTED_PATH", False):
-            imported_dirs, imported_files = self._collect_imported_path()
+        skip_last = (skip_last_dirs == 1)
+        if skip_last_dirs > 0:
+            imported_dirs, imported_files, imported_id = self._collect_imported_path(skip_last)
+        elif CONF.get("SKIP_IMPORTED_PATH", False):
+            imported_dirs, imported_files, imported_id = self._collect_imported_path(False)
 
         # 收集待处理的文件，跳过已导入的
         filelist = self._collect_files(path_dir, imported_dirs=imported_dirs, imported_files=imported_files)

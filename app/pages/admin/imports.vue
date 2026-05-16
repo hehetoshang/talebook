@@ -14,7 +14,7 @@
             {{ t('admin.imports.message.importAsyncInfo') }}<br>
             {{ t('admin.imports.message.calibreInfo') }}
         </v-card-text>
-        <v-card-actions>
+        <v-card-actions class="flex-wrap gap-2">
             <v-btn
                 :disabled="loading"
                 variant="outlined"
@@ -87,6 +87,22 @@
                 hide-details
             />
         </v-card-actions>
+        <v-card-text>
+            <v-row align="center">
+                <v-col cols="12" sm="6" md="4">
+                    <v-select
+                        v-model="skip_last_dirs"
+                        :items="scanScopeOptionsLocalized"
+                        :label="t('admin.imports.label.scanScope')"
+                        item-text="text"
+                        item-value="value"
+                        dense
+                        outlined
+                        hide-details
+                    />
+                </v-col>
+            </v-row>
+        </v-card-text>
         <v-card-text>
             <div v-if="selected.length == 0">
                 {{ t('admin.imports.message.selectFilesInfo') }}
@@ -745,6 +761,12 @@ const options = ref({ page: 1, itemsPerPage: 100, sortBy: [{ key: 'create_time',
 const count_todo = ref(0);
 const count_done = ref(0);
 const delete_after_import = ref(false);
+const skip_last_dirs = ref(0);
+const scanScopeOptions = [
+    { text: "admin.imports.label.scanScopeAll", value: 0 },
+    { text: "admin.imports.label.scanScopeExcludeLast", value: 1 },
+    { text: "admin.imports.label.scanScopeExcludeAll", value: 2 },
+];
 const opdsImportDialogVisible = ref(false);
 const opdsHost = ref('');
 const opdsPort = ref('');
@@ -853,6 +875,14 @@ const isError = computed(() => opdsImportState.value === 'error');
 // 计算导入是否正在进行中
 const isOpdsOperationInProgress = computed(() => {
     return opdsLoading.value || opdsImportState.value === 'importing';
+});
+
+// 扫描范围选项本地化
+const scanScopeOptionsLocalized = computed(() => {
+    return scanScopeOptions.map((item) => ({
+        text: t(item.text),
+        value: item.value,
+    }));
 });
 
 // 左侧按钮点击处理
@@ -1059,7 +1089,8 @@ const import_books = () => {
         method: 'POST',
         body: JSON.stringify({
             hashlist: hashlist,
-            delete_after: delete_after_import.value
+            delete_after: delete_after_import.value,
+            skip_last_dirs: skip_last_dirs.value
         }),
     })
         .then((rsp) => {

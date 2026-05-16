@@ -478,7 +478,11 @@
         "savedOpdsSources": "已保存的 OPDS 源",
         "sourceName": "源名称",
         "description": "描述",
-        "sourceActive": "启用此源"
+        "sourceActive": "启用此源",
+        "scanScope": "扫描范围",
+        "scanScopeAll": "扫描全部",
+        "scanScopeExcludeLast": "跳过上次导入的目录",
+        "scanScopeExcludeAll": "跳过所有已导入的目录"
       },
       "placeholder": {
         "sourceName": "例如：我的 Calibre 图书馆",
