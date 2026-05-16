@@ -11,7 +11,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.log
 from social_tornado.models import init_social
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text, event
 from sqlalchemy.orm import scoped_session, sessionmaker
 from tornado import web
 from tornado.options import define, options
@@ -197,6 +197,25 @@ def make_app():
 
     # build sql session factory
     engine = create_engine(auth_db_path, **CONF["db_engine_args"])
+
+    if auth_db_path.startswith("sqlite"):
+        # Set WAL mode once
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("PRAGMA journal_mode=WAL"))
+            logging.info("SQLite journal_mode set to WAL")
+        except Exception as e:
+            logging.warning(f"Failed to set SQLite WAL mode (falling back to default journal mode): {e}")
+
+        @event.listens_for(engine, "connect")
+        def set_sqlite_pragma(dbapi_connection, connection_record):
+            cursor = dbapi_connection.cursor()
+            try:
+                cursor.execute("PRAGMA busy_timeout=30000")
+            except Exception as e:
+                logging.warning(f"Failed to set SQLite busy_timeout: {e}")
+            cursor.close()
+
     ScopedSession = scoped_session(sessionmaker(bind=engine, autoflush=True, autocommit=False))
     models.bind_session(ScopedSession)
     init_social(models.Base, ScopedSession, CONF)

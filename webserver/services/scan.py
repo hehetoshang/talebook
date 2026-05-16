@@ -8,16 +8,106 @@ import os
 import time
 from webserver.i18n import _
 
-from webserver import utils
+from webserver import utils, loader
 from webserver.models import Item, ScanFile
 from webserver.services import AsyncService
 from webserver.services.autofill import AutoFillService
 
 
+CONF = loader.get_settings()
 SCAN_EXT = ["azw", "azw3", "epub", "mobi", "pdf", "txt"]
 
 
 class ScanService(AsyncService):
+    def _collect_imported_path(self):
+        """收集已导入的路径，用于在扫描时跳过这些文件和目录"""
+        start_time = time.time()
+        imported_rows = (
+            self.session.query(ScanFile.path)
+            .filter(ScanFile.status.in_([ScanFile.IMPORTED, ScanFile.EXIST]))
+            .filter(ScanFile.path.isnot(None))
+            .order_by(ScanFile.update_time.desc(), ScanFile.id.desc())
+            .all()
+        )
+        if not imported_rows:
+            return [], []
+
+        last_imported_dir = None
+        imported_dirs = set()
+        imported_files_in_last_dir = set()
+
+        for (path,) in imported_rows:
+            if not path:
+                continue
+            fpath = os.path.realpath(path)
+            fdir = os.path.dirname(fpath)
+            if last_imported_dir is None:
+                last_imported_dir = fdir
+            if fdir == last_imported_dir:
+                imported_files_in_last_dir.add(fpath)
+            elif fdir:
+                imported_dirs.add(fdir)
+
+        if last_imported_dir is None:
+            return [], []
+
+        logging.info(
+            "[SCAN] Imported path cache loaded: dirs=%d, files_in_last_dir=%d, last_dir=%s, cost=%.3f seconds",
+            len(imported_dirs),
+            len(imported_files_in_last_dir),
+            last_imported_dir,
+            time.time() - start_time,
+        )
+        return list(imported_dirs), list(imported_files_in_last_dir)
+
+    def _collect_files(self, paths, imported_dirs=None, imported_files=None):
+        """收集文件列表，跳过已导入的目录和文件"""
+        if paths is None or paths == "all":
+            dirs = [CONF.get("scan_upload_path", "")]
+            if not dirs[0] or not os.path.isdir(dirs[0]):
+                return []
+        elif isinstance(paths, str):
+            dirs = [paths]
+        else:
+            dirs = list(paths)
+
+        imported_dir_set = {os.path.realpath(d) for d in (imported_dirs or []) if d}
+        imported_file_set = {os.path.realpath(p) for p in (imported_files or []) if p}
+
+        filelist = []
+        for p in dirs:
+            if os.path.isfile(p):
+                fmt = p.split(".")[-1].lower()
+                if fmt not in SCAN_EXT:
+                    continue
+                real_p = os.path.realpath(p)
+                if real_p in imported_file_set or os.path.dirname(real_p) in imported_dir_set:
+                    continue
+                filelist.append(p)
+            elif os.path.isdir(p):
+                for dirpath, dirnames, filenames in os.walk(p):
+                    real_dirpath = os.path.realpath(dirpath)
+                    # 跳过已导入的目录下的子目录
+                    dirnames[:] = [
+                        d for d in dirnames
+                        if os.path.realpath(os.path.join(dirpath, d)) not in imported_dir_set
+                    ]
+                    # 跳过已导入的整个目录
+                    if real_dirpath in imported_dir_set:
+                        continue
+                    for fname in filenames:
+                        fmt = fname.split(".")[-1].lower()
+                        if not fmt or fmt not in SCAN_EXT or fname.startswith('.'):
+                            continue
+                        fpath = os.path.join(dirpath, fname)
+                        if not os.path.isfile(fpath):
+                            continue
+                        if os.path.realpath(fpath) not in imported_file_set:
+                            filelist.append(fpath)
+            else:
+                logging.warning("[SCAN] Path not found: %s", p)
+        return filelist
+
     def save_or_rollback(self, row):
         try:
             # 直接使用session.add和flush，避免多次commit导致的事务冲突
@@ -51,26 +141,22 @@ class ScanService(AsyncService):
         logging.info("<%s> we are: db=%s, session=%s", self, self.db, self.session)
         logging.info("start to scan %s", path_dir)
 
-        # 先检查目录中是否有待扫描的书籍
-        has_books = False
+        # 收集已导入的路径
+        imported_dirs = []
+        imported_files = []
+        if CONF.get("SKIP_IMPORTED_PATH", False):
+            imported_dirs, imported_files = self._collect_imported_path()
+
+        # 收集待处理的文件，跳过已导入的
+        filelist = self._collect_files(path_dir, imported_dirs=imported_dirs, imported_files=imported_files)
+        
+        # 构建任务列表
         tasks = []
-        for dirpath, dirnames, filenames in os.walk(path_dir):
-            # 排除隐藏文件夹（以.开头或@__thumb等）
-            dirnames[:] = [d for d in dirnames if not (d.startswith(".") or d.startswith("@__"))]
-
-            for fname in filenames:
-                # 排除隐藏文件
-                if fname.startswith("."):
-                    continue
-
-                fpath = os.path.join(dirpath, fname)
-                if not os.path.isfile(fpath):
-                    continue
-
-                fmt = fpath.split(".")[-1].lower()
-                if fmt in SCAN_EXT:
-                    has_books = True
-                    tasks.append((fname, fpath, fmt))
+        has_books = len(filelist) > 0
+        for fpath in filelist:
+            fname = os.path.basename(fpath)
+            fmt = fpath.split(".")[-1].lower()
+            tasks.append((fname, fpath, fmt))
 
         # 检查是否有符合条件的书籍文件
         if not has_books:
